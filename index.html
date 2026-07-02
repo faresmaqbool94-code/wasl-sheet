@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" id="htmlRoot">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تسجيل بيانات الشركة والمركبات</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0f5132">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="تسجيل المركبات">
+<style>
+  :root{
+    --primary:#0f5132;
+    --primary-light:#146c43;
+    --border:#d0d7de;
+    --bg:#f6f8fa;
+    --yellow:#fffde0;
+    --blue:#eaf2ff;
+    --green:#eafbea;
+    --red:#fdeeee;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:'Tahoma','Segoe UI',sans-serif;
+    background:var(--bg);
+    margin:0;
+    padding:20px;
+    color:#1f2937;
+  }
+  .wrap{max-width:900px;margin:0 auto;position:relative;}
+  .topbar{display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:4px;}
+  h1{font-size:22px;color:var(--primary);text-align:center;margin:0;}
+  p.sub{text-align:center;color:#6b7280;margin-top:8px;margin-bottom:24px;font-size:14px;}
+
+  #langToggle{
+    position:absolute;
+    inset-inline-end:0;
+    top:0;
+    width:42px;height:42px;
+    border-radius:50%;
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    font-size:15px;
+    font-weight:bold;
+    cursor:pointer;
+    box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  }
+  #langToggle:hover{background:var(--primary-light);}
+
+  .card{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:20px;
+    margin-bottom:20px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card h2{
+    font-size:17px;
+    color:var(--primary);
+    margin:0 0 16px;
+    padding-bottom:8px;
+    border-bottom:2px solid var(--primary);
+  }
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .grid.g3{grid-template-columns:1fr 1fr 1fr;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:13px;font-weight:bold;color:#374151;}
+  .field input, .field select{
+    padding:9px 10px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    font-size:14px;
+    font-family:inherit;
+  }
+  .field input:focus, .field select:focus{
+    outline:none;border-color:var(--primary);
+  }
+  /* الحقول الرقمية دائمًا إنجليزي LTR بغض النظر عن لغة الواجهة */
+  .force-en-digits{ direction:ltr; text-align:left; font-family:'Segoe UI',Tahoma,sans-serif; }
+
+  .vehicle-block{
+    border:1px solid var(--border);
+    border-radius:8px;
+    margin-bottom:16px;
+    overflow:hidden;
+  }
+  .vehicle-head{
+    background:var(--primary);
+    color:#fff;
+    padding:10px 14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:14px;
+    font-weight:bold;
+  }
+  .vehicle-head button{
+    background:#dc3545;border:none;color:#fff;
+    padding:5px 10px;border-radius:5px;cursor:pointer;font-size:12px;
+  }
+  .vehicle-body{padding:16px;}
+  .section-title{
+    font-size:13px;font-weight:bold;color:#6b7280;
+    margin:14px 0 8px;
+    text-transform:uppercase;
+  }
+  .weight-stage{
+    padding:10px;border-radius:6px;margin-bottom:10px;
+  }
+  .stage-none{background:var(--blue);}
+  .stage-half{background:var(--green);}
+  .stage-full{background:var(--red);}
+  .stage-title{font-size:13px;font-weight:bold;margin-bottom:8px;}
+  #addVehicleBtn{
+    display:block;width:100%;
+    background:#fff;border:2px dashed var(--primary);
+    color:var(--primary);padding:12px;border-radius:8px;
+    font-size:14px;font-weight:bold;cursor:pointer;margin-bottom:20px;
+  }
+  #addVehicleBtn:hover{background:var(--blue);}
+  #submitBtn{
+    display:block;width:100%;
+    background:var(--primary);color:#fff;border:none;
+    padding:14px;border-radius:8px;font-size:16px;font-weight:bold;
+    cursor:pointer;
+  }
+  #submitBtn:hover{background:var(--primary-light);}
+  #submitBtn:disabled{background:#9ca3af;cursor:not-allowed;}
+  .status{
+    text-align:center;padding:14px;border-radius:8px;margin-top:16px;
+    font-size:14px;display:none;
+  }
+  .status.ok{background:#eafbea;color:#146c43;display:block;}
+  .status.err{background:#fdeeee;color:#b02a37;display:block;}
+
+  .helper-box{
+    background:var(--yellow);
+    border:1px dashed #d1a900;
+    border-radius:8px;
+    padding:14px;
+    margin-bottom:16px;
+    display:flex;
+    gap:14px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .helper-box .helper-text{flex:1;min-width:180px;font-size:12.5px;color:#6b5900;}
+  .helper-box img{flex-shrink:0;width:230px;height:auto;border-radius:6px;}
+
+  @media(max-width:640px){
+    .grid, .grid.g3{grid-template-columns:1fr;}
+    .helper-box{flex-direction:column;}
+    #langToggle{position:static;margin-bottom:10px;}
+    .topbar{flex-direction:column;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1 data-i18n="h1">تسجيل بيانات الشركة والمركبات</h1>
+    <button type="button" id="langToggle" onclick="toggleLang()">E</button>
+  </div>
+  <p class="sub" data-i18n="sub">عبّي البيانات التالية وسيتم إنشاء ملف إكسل خاص بك وإرساله تلقائيًا</p>
+
+  <form id="mainForm">
+    <!-- بيانات الشركة -->
+    <div class="card">
+      <h2 data-i18n="company_heading">بيانات الشركة</h2>
+
+      <div class="helper-box">
+        <img src="./cr-example.png" alt="مثال توضيحي لشهادة السجل التجاري">
+        <div class="helper-text">
+          <b data-i18n="helper_title">وين تلقى هذي الأرقام؟</b><br>
+          <span data-i18n="helper_text">"رقم الشركة / السجل التجاري" و"تاريخ السجل الهجري" موجودين أعلى شهادة السجل التجاري الخاصة بمنشأتك (أو بطاقة الهوية في حالة الربط الفردي). انسخهم بالضبط زي ما هم مكتوبين.</span>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="field">
+          <label data-i18n="org_id_label">رقم الشركة أو رقم بطاقة المالك</label>
+          <input type="text" name="org_id" class="force-en-digits">
+        </div>
+        <div class="field">
+          <label data-i18n="cr_number_label">رقم السجل التجاري أو رقم الهوية</label>
+          <input type="text" name="cr_number" class="force-en-digits">
+        </div>
+        <div class="field">
+          <label data-i18n="cr_date_label">تاريخ السجل التجاري الهجري أو تاريخ الميلاد</label>
+          <input type="text" name="cr_date_hijri" class="force-en-digits" data-ph-ar="مثال: 1442" data-ph-en="e.g. 1442">
+        </div>
+        <div class="field">
+          <label data-i18n="company_phone_label">رقم تليفون الشركة</label>
+          <input type="tel" name="company_phone" class="force-en-digits">
+        </div>
+        <div class="field">
+          <label data-i18n="extension_label">رقم التحويلة (اختياري)</label>
+          <input type="text" name="extension" class="force-en-digits">
+        </div>
+        <div class="field">
+          <label data-i18n="email_label">البريد الإلكتروني</label>
+          <input type="email" name="company_email" class="force-en-digits">
+        </div>
+        <div class="field">
+          <label data-i18n="manager_name_label">اسم مدير الشركة (عربي)</label>
+          <input type="text" name="manager_name">
+        </div>
+        <div class="field">
+          <label data-i18n="manager_phone_label">رقم هاتف مدير الشركة</label>
+          <input type="tel" name="manager_phone" class="force-en-digits">
+        </div>
+        <div class="field">
+          <label data-i18n="manager_mobile_label">رقم جوال مدير الشركة</label>
+          <input type="tel" name="manager_mobile" class="force-en-digits">
+        </div>
+      </div>
+    </div>
+
+    <div id="vehiclesContainer"></div>
+
+    <button type="button" id="addVehicleBtn" data-i18n="add_vehicle_btn">+ إضافة سيارة جديدة</button>
+
+    <button type="submit" id="submitBtn" data-i18n="submit_btn">إرسال البيانات</button>
+    <div class="status" id="statusBox"></div>
+  </form>
+</div>
+
+<script>
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzo8gSQzUAJamRRbSdrF0ktRIZjQwLLlqaUbIqgaonwZTsugqMA5rpi0RrZkA7pH59TKA/exec";
+
+/* ============ الترجمة ============ */
+const DICT = {
+  h1: {ar:"تسجيل بيانات الشركة والمركبات", en:"Company & Vehicles Registration"},
+  sub: {ar:"عبّي البيانات التالية وسيتم إنشاء ملف إكسل خاص بك وإرساله تلقائيًا", en:"Fill in the details below, a dedicated Excel file will be generated and sent automatically"},
+  company_heading: {ar:"بيانات الشركة", en:"Company Info"},
+  helper_title: {ar:"وين تلقى هذي الأرقام؟", en:"Where to find these numbers?"},
+  helper_text: {ar:"\"رقم الشركة / السجل التجاري\" و\"تاريخ السجل الهجري\" موجودين أعلى شهادة السجل التجاري الخاصة بمنشأتك (أو بطاقة الهوية في حالة الربط الفردي). انسخهم بالضبط زي ما هم مكتوبين.", en:"The \"Company/CR Number\" and \"CR Hijri Date\" appear at the top of your Commercial Registration certificate (or ID card for individual linking). Copy them exactly as written."},
+  org_id_label: {ar:"رقم الشركة أو رقم بطاقة المالك", en:"Organization / Individual ID"},
+  cr_number_label: {ar:"رقم السجل التجاري أو رقم الهوية", en:"CR Number / Individual ID"},
+  cr_date_label: {ar:"تاريخ السجل التجاري الهجري أو تاريخ الميلاد", en:"CR Date / Birthdate (Hijri)"},
+  company_phone_label: {ar:"رقم تليفون الشركة", en:"Company Phone"},
+  extension_label: {ar:"رقم التحويلة (اختياري)", en:"Extension (Optional)"},
+  email_label: {ar:"البريد الإلكتروني", en:"Email"},
+  manager_name_label: {ar:"اسم مدير الشركة (عربي)", en:"Manager Name (Arabic)"},
+  manager_phone_label: {ar:"رقم هاتف مدير الشركة", en:"Manager Phone"},
+  manager_mobile_label: {ar:"رقم جوال مدير الشركة", en:"Manager Mobile"},
+  add_vehicle_btn: {ar:"+ إضافة سيارة جديدة", en:"+ Add New Vehicle"},
+  submit_btn: {ar:"إرسال البيانات", en:"Submit Data"},
+  submit_btn_sending: {ar:"جارِ الإرسال...", en:"Sending..."},
+  status_ok: {ar:"تم إرسال البيانات بنجاح، شكرًا لك.", en:"Data submitted successfully, thank you."},
+  status_err_prefix: {ar:"حدث خطأ أثناء الإرسال: ", en:"An error occurred while sending: "},
+  status_no_url: {ar:"لم يتم إعداد رابط الإرسال بعد (WEB_APP_URL).", en:"Submission URL is not configured yet (WEB_APP_URL)."},
+  remove_btn: {ar:"حذف", en:"Remove"},
+  driver_heading: {ar:"معلومات السائق", en:"Driver Info"},
+  driver_id_label: {ar:"رقم إقامة السائق", en:"Driver ID"},
+  driver_birthdate_label: {ar:"تاريخ الميلاد كما بالهوية", en:"Birthdate as in ID"},
+  driver_mobile_label: {ar:"رقم جوال السائق", en:"Mobile No"},
+  vehicle_heading: {ar:"معلومات السيارة", en:"Vehicle Info"},
+  seq_number_label: {ar:"الرقم التسلسلي", en:"Sequence Number"},
+  plate_number_label: {ar:"أرقام اللوحة", en:"Plate Number"},
+  plate_type_label: {ar:"نوع التسجيل", en:"Plate Type"},
+  plate_type_placeholder: {ar:"اختر...", en:"Select..."},
+  plate_type_general: {ar:"نقل عام", en:"General Transport"},
+  plate_type_private: {ar:"نقل خاص", en:"Private Transport"},
+  plate_left_label: {ar:"حرف اللوحة - الأيسر", en:"Plate Letter - Left"},
+  plate_middle_label: {ar:"حرف اللوحة - الوسط", en:"Plate Letter - Middle"},
+  plate_right_label: {ar:"حرف اللوحة - الأيمن", en:"Plate Letter - Right"},
+  imei_label: {ar:"رقم الجهاز IMEI (بأفاقي)", en:"Device IMEI (By Afaqy)"},
+  weight_heading: {ar:"أوزان المركبة", en:"Vehicle Weight"},
+  w_none_title: {ar:"الوزن بدون حمولة", en:"Weight Without Load"},
+  w_half_title: {ar:"الوزن مع نصف حمولة", en:"Weight With Half Load"},
+  w_full_title: {ar:"الوزن مع أقصى حمولة", en:"Weight With Full Load"},
+  weight_label: {ar:"الوزن (كجم)", en:"Weight (kg)"},
+  time_label: {ar:"الوقت", en:"Time"},
+  date_label: {ar:"التاريخ", en:"Date"}
+};
+
+let currentLang = 'ar';
+
+function applyStaticTranslations(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if(DICT[key]) el.textContent = DICT[key][currentLang];
+  });
+  document.querySelectorAll('[data-ph-ar]').forEach(el=>{
+    el.placeholder = currentLang === 'ar' ? el.getAttribute('data-ph-ar') : el.getAttribute('data-ph-en');
+  });
+}
+
+function toggleLang(){
+  currentLang = currentLang === 'ar' ? 'en' : 'ar';
+  document.getElementById('htmlRoot').setAttribute('lang', currentLang);
+  document.getElementById('htmlRoot').setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+  document.getElementById('langToggle').textContent = currentLang === 'ar' ? 'E' : 'ع';
+  applyStaticTranslations();
+  translateAllVehicles();
+}
+
+/* ============ إجبار الأرقام تكون إنجليزية دائمًا ============ */
+function toEnglishDigits(str){
+  const arabicIndic = '٠١٢٣٤٥٦٧٨٩';
+  const extArabicIndic = '۰۱۲۳۴۵۶۷۸۹';
+  return str.replace(/[٠-٩]/g, d => arabicIndic.indexOf(d))
+             .replace(/[۰-۹]/g, d => extArabicIndic.indexOf(d));
+}
+
+function attachDigitNormalizer(root){
+  root.querySelectorAll('.force-en-digits, input[type="number"], input[type="date"], input[type="time"]').forEach(input=>{
+    input.addEventListener('input', ()=>{
+      const converted = toEnglishDigits(input.value);
+      if(converted !== input.value){
+        const pos = input.selectionStart;
+        input.value = converted;
+        if(pos) input.setSelectionRange(pos, pos);
+      }
+    });
+  });
+}
+
+/* ============ بلوكات السيارات ============ */
+let vehicleCount = 0;
+const container = document.getElementById('vehiclesContainer');
+
+function vehicleTemplate(idx){
+  return `
+  <div class="vehicle-block" data-idx="${idx}">
+    <div class="vehicle-head">
+      <span class="vehicle-title" data-idx-label="${idx}"></span>
+      <button type="button" data-i18n="remove_btn" onclick="removeVehicle(${idx})">حذف</button>
+    </div>
+    <div class="vehicle-body">
+      <div class="section-title" data-i18n="driver_heading">معلومات السائق</div>
+      <div class="grid g3">
+        <div class="field">
+          <label data-i18n="driver_id_label">رقم إقامة السائق</label>
+          <input type="text" name="v${idx}_driver_id" class="force-en-digits">
+        </div>
+        <div class="field">
+          <label data-i18n="driver_birthdate_label">تاريخ الميلاد كما بالهوية</label>
+          <input type="text" name="v${idx}_driver_birthdate" class="force-en-digits" placeholder="1400-01-01">
+        </div>
+        <div class="field">
+          <label data-i18n="driver_mobile_label">رقم جوال السائق</label>
+          <input type="tel" name="v${idx}_driver_mobile" class="force-en-digits">
+        </div>
+      </div>
+
+      <div class="section-title" data-i18n="vehicle_heading">معلومات السيارة</div>
+      <div class="grid g3">
+        <div class="field">
+          <label data-i18n="seq_number_label">الرقم التسلسلي</label>
+          <input type="text" name="v${idx}_seq_number" class="force-en-digits">
+        </div>
+        <div class="field">
+          <label data-i18n="plate_number_label">أرقام اللوحة</label>
+          <input type="text" name="v${idx}_plate_number" class="force-en-digits">
+        </div>
+        <div class="field">
+          <label data-i18n="plate_type_label">نوع التسجيل</label>
+          <select name="v${idx}_plate_type">
+            <option value="" data-i18n="plate_type_placeholder">اختر...</option>
+            <option value="نقل عام" data-i18n="plate_type_general">نقل عام</option>
+            <option value="نقل خاص" data-i18n="plate_type_private">نقل خاص</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid g3">
+        <div class="field">
+          <label data-i18n="plate_left_label">حرف اللوحة - الأيسر</label>
+          <input type="text" name="v${idx}_plate_left" maxlength="2">
+        </div>
+        <div class="field">
+          <label data-i18n="plate_middle_label">حرف اللوحة - الوسط</label>
+          <input type="text" name="v${idx}_plate_middle" maxlength="2">
+        </div>
+        <div class="field">
+          <label data-i18n="plate_right_label">حرف اللوحة - الأيمن</label>
+          <input type="text" name="v${idx}_plate_right" maxlength="2">
+        </div>
+      </div>
+      <div class="grid">
+        <div class="field">
+          <label data-i18n="imei_label">رقم الجهاز IMEI (بأفاقي)</label>
+          <input type="text" name="v${idx}_imei" class="force-en-digits">
+        </div>
+      </div>
+
+      <div class="section-title" data-i18n="weight_heading">أوزان المركبة</div>
+
+      <div class="weight-stage stage-none">
+        <div class="stage-title" data-i18n="w_none_title">الوزن بدون حمولة</div>
+        <div class="grid g3">
+          <div class="field">
+            <label data-i18n="weight_label">الوزن (كجم)</label>
+            <input type="number" step="0.01" name="v${idx}_w_none_weight" class="force-en-digits">
+          </div>
+          <div class="field">
+            <label data-i18n="time_label">الوقت</label>
+            <input type="time" name="v${idx}_w_none_time" class="force-en-digits">
+          </div>
+          <div class="field">
+            <label data-i18n="date_label">التاريخ</label>
+            <input type="date" name="v${idx}_w_none_date" class="force-en-digits">
+          </div>
+        </div>
+      </div>
+
+      <div class="weight-stage stage-half">
+        <div class="stage-title" data-i18n="w_half_title">الوزن مع نصف حمولة</div>
+        <div class="grid g3">
+          <div class="field">
+            <label data-i18n="weight_label">الوزن (كجم)</label>
+            <input type="number" step="0.01" name="v${idx}_w_half_weight" class="force-en-digits">
+          </div>
+          <div class="field">
+            <label data-i18n="time_label">الوقت</label>
+            <input type="time" name="v${idx}_w_half_time" class="force-en-digits">
+          </div>
+          <div class="field">
+            <label data-i18n="date_label">التاريخ</label>
+            <input type="date" name="v${idx}_w_half_date" class="force-en-digits">
+          </div>
+        </div>
+      </div>
+
+      <div class="weight-stage stage-full">
+        <div class="stage-title" data-i18n="w_full_title">الوزن مع أقصى حمولة</div>
+        <div class="grid g3">
+          <div class="field">
+            <label data-i18n="weight_label">الوزن (كجم)</label>
+            <input type="number" step="0.01" name="v${idx}_w_full_weight" class="force-en-digits">
+          </div>
+          <div class="field">
+            <label data-i18n="time_label">الوقت</label>
+            <input type="time" name="v${idx}_w_full_time" class="force-en-digits">
+          </div>
+          <div class="field">
+            <label data-i18n="date_label">التاريخ</label>
+            <input type="date" name="v${idx}_w_full_date" class="force-en-digits">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function setVehicleTitle(idx){
+  const el = document.querySelector(`.vehicle-title[data-idx-label="${idx}"]`);
+  if(!el) return;
+  el.textContent = currentLang === 'ar' ? `سيارة رقم ${idx}` : `Vehicle #${idx}`;
+}
+
+function translateAllVehicles(){
+  document.querySelectorAll('.vehicle-title').forEach(el=>{
+    setVehicleTitle(el.getAttribute('data-idx-label'));
+  });
+}
+
+function addVehicle(){
+  vehicleCount++;
+  container.insertAdjacentHTML('beforeend', vehicleTemplate(vehicleCount));
+  applyStaticTranslations();
+  setVehicleTitle(vehicleCount);
+  attachDigitNormalizer(container);
+}
+
+function removeVehicle(idx){
+  const el = container.querySelector(`.vehicle-block[data-idx="${idx}"]`);
+  if(el) el.remove();
+}
+
+document.getElementById('addVehicleBtn').addEventListener('click', addVehicle);
+applyStaticTranslations();
+attachDigitNormalizer(document);
+addVehicle();
+
+/* ============ الإرسال ============ */
+document.getElementById('mainForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+
+  const submitBtn = document.getElementById('submitBtn');
+  const statusBox = document.getElementById('statusBox');
+  statusBox.className = 'status';
+  statusBox.textContent = '';
+
+  if(WEB_APP_URL.includes('PASTE_YOUR')){
+    statusBox.className = 'status err';
+    statusBox.textContent = DICT.status_no_url[currentLang];
+    return;
+  }
+
+  const formData = new FormData(this);
+  const data = { company: {}, vehicles: [] };
+
+  ['org_id','cr_number','cr_date_hijri','company_phone','extension','company_email',
+   'manager_name','manager_phone','manager_mobile'].forEach(k=>{
+    data.company[k] = formData.get(k) || '';
+  });
+
+  document.querySelectorAll('.vehicle-block').forEach(block=>{
+    const idx = block.dataset.idx;
+    const v = {};
+    const fields = ['driver_id','driver_birthdate','driver_mobile','seq_number','plate_number',
+      'plate_type','plate_left','plate_middle','plate_right','imei',
+      'w_none_weight','w_none_time','w_none_date',
+      'w_half_weight','w_half_time','w_half_date',
+      'w_full_weight','w_full_time','w_full_date'];
+    fields.forEach(f=>{
+      v[f] = formData.get(`v${idx}_${f}`) || '';
+    });
+    data.vehicles.push(v);
+  });
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = DICT.submit_btn_sending[currentLang];
+
+  try{
+    const res = await fetch(WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if(result.status === 'ok'){
+      statusBox.className = 'status ok';
+      statusBox.textContent = DICT.status_ok[currentLang];
+      this.reset();
+      container.innerHTML = '';
+      vehicleCount = 0;
+      addVehicle();
+    } else {
+      throw new Error(result.message || 'Unknown error');
+    }
+  } catch(err){
+    statusBox.className = 'status err';
+    statusBox.textContent = DICT.status_err_prefix[currentLang] + err.message;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = DICT.submit_btn[currentLang];
+  }
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').catch(err => {
+      console.log('SW registration failed:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
