@@ -50,6 +50,38 @@
   }
   #langToggle:hover{background:var(--primary-light);}
 
+  #installBtn{
+    display:none;
+    max-width:900px;
+    margin:0 auto 16px;
+    background:#fff;
+    border:2px solid var(--primary);
+    color:var(--primary);
+    padding:12px;
+    border-radius:8px;
+    font-size:14px;
+    font-weight:bold;
+    cursor:pointer;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+  }
+  #installBtn.show{display:flex;}
+  #installBtn:hover{background:var(--blue);}
+  #iosHint{
+    display:none;
+    max-width:900px;
+    margin:0 auto 16px;
+    background:var(--yellow);
+    border:1px dashed #d1a900;
+    border-radius:8px;
+    padding:10px 14px;
+    font-size:12.5px;
+    color:#6b5900;
+    text-align:center;
+  }
+  #iosHint.show{display:block;}
+
   .card{
     background:#fff;
     border:1px solid var(--border);
@@ -167,6 +199,9 @@
   </div>
   <p class="sub" data-i18n="sub">عبّي البيانات التالية وسيتم إنشاء ملف إكسل خاص بك وإرساله تلقائيًا</p>
 
+  <button type="button" id="installBtn" data-i18n="install_btn">⬇ تثبيت التطبيق على الجهاز</button>
+  <div id="iosHint" data-i18n="ios_hint">لتثبيت التطبيق على آيفون: اضغط زر المشاركة ⬆ بالمتصفح، ثم اختر "إضافة إلى الشاشة الرئيسية"</div>
+
   <form id="mainForm">
     <!-- بيانات الشركة -->
     <div class="card">
@@ -276,7 +311,9 @@ const DICT = {
   w_full_title: {ar:"الوزن مع أقصى حمولة", en:"Weight With Full Load"},
   weight_label: {ar:"الوزن (كجم)", en:"Weight (kg)"},
   time_label: {ar:"الوقت", en:"Time"},
-  date_label: {ar:"التاريخ", en:"Date"}
+  date_label: {ar:"التاريخ", en:"Date"},
+  install_btn: {ar:"⬇ تثبيت التطبيق على الجهاز", en:"⬇ Install App on Device"},
+  ios_hint: {ar:'لتثبيت التطبيق على آيفون: اضغط زر المشاركة ⬆ بالمتصفح، ثم اختر "إضافة إلى الشاشة الرئيسية"', en:'To install on iPhone: tap the Share ⬆ button in the browser, then choose "Add to Home Screen"'}
 };
 
 let currentLang = 'ar';
@@ -551,6 +588,40 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+/* ============ زر التثبيت ============ */
+let deferredPrompt = null;
+const installBtn = document.getElementById('installBtn');
+const iosHint = document.getElementById('iosHint');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.classList.add('show');
+});
+
+installBtn.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') {
+    installBtn.classList.remove('show');
+  }
+  deferredPrompt = null;
+});
+
+window.addEventListener('appinstalled', () => {
+  installBtn.classList.remove('show');
+  iosHint.classList.remove('show');
+});
+
+// اكتشاف آيفون/آيباد (ما يدعم beforeinstallprompt، يحتاج تعليمات يدوية)
+const isIOS = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+if (isIOS && !isStandalone) {
+  iosHint.classList.add('show');
+}
+
 </script>
 </body>
 </html>
